@@ -1,0 +1,41 @@
+Algorithm for VDS air brake deployment.
+
+Definitions:
+- Percent of deployed surface area: the percent of the total air brake surface area that is 
+outside the vehicle.
+
+Parameters:
+(1) Subalgorithm: Determination of launch detection
+    - This is how the system determines that launch has been detected.
+(2) Subalgorithm: Determination of motor burnout
+    - This is how the system determines that motor burnout has completed.
+    - Options:
+        - Constant wait. 
+(3) Subalgorithm: Air brake deployment incrementation algorithm
+    - This is the algorithm which determines how much of the air brake to deploy when the 
+    main algorithm determines that it needs to change the deployed surface area. 
+    - Options:
+        - Simple incrementation. If the main algorithm needs to increase surface area, this 
+        scheme simply increments or decrements the air brake surface area deployed by some fixed amount.
+        - Calculated incrementation. If the main deployment algorithm needs 
+(4) Integer: Desired apogee
+    - This is the apogee that the air brake is trying to achieve
+(5) Subalgorithm: Data barrier to actuation
+    - This defines how long the air brake must wait beyond motor burnout to begin actuating
+    in reaction to sensor readings. This is to ensure that data collection will yield an accurate
+    model for apogee prediction.
+    - Options:
+        - Wait until n data points have been collected
+        - Wait for n second(s) of data collection
+(6) Subalgorithm: Apogee prediction
+
+Main Algorithm:
+(1) Wait for launch to be detected. If launch is detected, proceed to step 2.
+(2) Wait for motor burnout to be detected. If motor burnout is detected, proceed to step 3.
+(3) Wait to overcome the data barrier to actuation. If barrier has been passed, proceed to step 4.
+(4) Calculate predicted apogee from apogee prediction model. 
+    (a) If predicted apogee is less than target apogee, proceed to step 4. 
+    (b) If predicted apogee is equal to target apogee, proceed to step 4.
+    (c)If predicted apogee is greater than target apogee, proceed to step 5.
+(5) Deploy percent air brake based on incrementation algorithm. 
+
