@@ -1,41 +1,75 @@
 Algorithm for VDS air brake deployment.
 
-Definitions:
-- Percent of deployed surface area: the percent of the total air brake surface area that is 
-outside the vehicle.
+The parameters are aspects of the model which can be independently modified to
+alter the performance of what is called the 'main algorithm', which is the program 
+flow for the main function. 
 
-Parameters:
+Parameters: 
 (1) Subalgorithm: Determination of launch detection
     - This is how the system determines that launch has been detected.
+    - This must output a true/false determination on the detection of launch.
 (2) Subalgorithm: Determination of motor burnout
     - This is how the system determines that motor burnout has completed.
+    - This must output a true/false determination on the detection of motor burnout.
     - Options:
-        - Constant wait. 
+        - Wait n seconds after launch. 
 (3) Subalgorithm: Air brake deployment incrementation algorithm
     - This is the algorithm which determines how much of the air brake to deploy when the 
     main algorithm determines that it needs to change the deployed surface area. 
+    - This must output a percent deployment for the air brake.
     - Options:
         - Simple incrementation. If the main algorithm needs to increase surface area, this 
         scheme simply increments or decrements the air brake surface area deployed by some fixed amount.
-        - Calculated incrementation. If the main deployment algorithm needs 
+        - Calculated incrementation. The results from the main deployment algorithm are fed here
+        to determine the estimated percent of air brake surface area that would need to be deployed to achieve apogee.
 (4) Integer: Desired apogee
-    - This is the apogee that the air brake is trying to achieve
+    - This is the apogee that the air brake is trying to achieve.
+    - e.g. 3700 feet
 (5) Subalgorithm: Data barrier to actuation
     - This defines how long the air brake must wait beyond motor burnout to begin actuating
     in reaction to sensor readings. This is to ensure that data collection will yield an accurate
     model for apogee prediction.
+    - This must output a true/false determination on whether or not data is a barrier to actuation. 
     - Options:
         - Wait until n data points have been collected
         - Wait for n second(s) of data collection
 (6) Subalgorithm: Apogee prediction
+    - This is the algorithm which takes altimeter data and fits it to a second degree
+    polynomial curve to estimate the current predicted apogee.
+(7) Integer: Range for incremental partial deployment (tolerance)
+    - This is the range of deployment for which the air brake considers apogee.
+    - If the air brake determines that the vehicle has a predicted apogee +/- this value, it will not take any action.
+    - e.g. 5 feet (so air brake is targetting an apogee between 3695 and 3705 if target apogee is 3700 feet)
+(8) Integer: Range for immediate full deployment
+    - This is the range around apogee during which immediate deployment should occur.
+    - If the air brake determines that the vehicle is within the target apogee +/- this value, it will immediately deploy the air brake
+    to ensure that the air brake takes some action.
+    - e.g. 25 feet (so immediate deployment occurs between 3675 and 3725 feet if target apogee is 3700 feet)
+(9) Subalgorithm: Determination of descent
+    - This is how the system determines that apogee has been reached and the vehicle is now descending.
+    - This must output a true/false determination on the detection of descent.
 
-Main Algorithm:
-(1) Wait for launch to be detected. If launch is detected, proceed to step 2.
-(2) Wait for motor burnout to be detected. If motor burnout is detected, proceed to step 3.
-(3) Wait to overcome the data barrier to actuation. If barrier has been passed, proceed to step 4.
-(4) Calculate predicted apogee from apogee prediction model. 
-    (a) If predicted apogee is less than target apogee, proceed to step 4. 
-    (b) If predicted apogee is equal to target apogee, proceed to step 4.
-    (c)If predicted apogee is greater than target apogee, proceed to step 5.
-(5) Deploy percent air brake based on incrementation algorithm. 
-
+Main algorithm, as a function of the algorithm parameters:
+1. Check if launch has been detected using launch detection algorithm (parameter 1). 
+    a. If launch is detected, proceed to step 2.
+    b. Otherwise, return to step 1.
+2. Check for motor burnout to be detected using motor burnout detection algorithm (parameter 2). 
+    a. If motor burnout is detected, proceed to step 3.
+    b. Otherwise, return to step 2.
+3. Check for if the data barrier to actuation has been met or surpassed. 
+    a. If barrier has been passed, proceed to step 4.
+    b. Otherwise, return to step 3.
+4. Read current altitude.
+    a. If current altitude is within percent difference for immediate deployment (parameter 8) of apogee, set air brake deployment percentage to 100%. 
+        i. Wait for descent indicator (parameter 9). 
+        ii. Retract to 0%.
+        iii. TERMINATE.
+    b. Otherwise, proceed to step 5.
+5. Calculate predicted apogee from apogee prediction algorithm (parameter 6).
+6. Compare predicted apogee to target apogee (parameter 4) using apogee comparison algorithm (parameter 7).
+    a. If predicted apogee is significantly less (defined by parameter (7)) than target apogee, then retract air brake to 0% deployment and TERMINATE.
+    b. If predicted apogee is within bounds defined by parameter (7) to target apogee, proceed to step 4.
+    c. If predicted apogee is significantly greater (defined by parameter (7)) than target apogee, proceed to step 7.
+7. Calculate air brake deployment action using the air brake incrementation algorithm (parameter 3).
+8. Actuate air brake deployment action.
+9. Deploy percent air brake based on parameter (3), wait for some period of time, and proceed to step 4. 
